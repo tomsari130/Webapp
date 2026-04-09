@@ -22,7 +22,14 @@ const ConfirmationPage = () => {
       {/* Header */}
       <header className="bg-[#0071CE] text-white py-4 shadow-md">
         <div className="container mx-auto px-4">
-          <h1 className="text-2xl font-bold text-center">Order Confirmation</h1>
+          <div className="flex items-center justify-center gap-3">
+            <img 
+              src="https://w7.pngwing.com/pngs/45/625/png-transparent-yellow-logo-illustration-walmart-logo-grocery-store-retail-asda-stores-limited-icon-walmart-logo-miscellaneous-company-orange.png"
+              alt="Walmart Logo"
+              className="h-8 w-8 object-contain"
+            />
+            <h1 className="text-2xl font-bold text-center">Order Confirmation</h1>
+          </div>
         </div>
       </header>
 
@@ -128,21 +135,11 @@ const ConfirmationPage = () => {
                 <div>
                   <h4 className="font-semibold text-gray-900">Delivered</h4>
                   <p className="text-sm text-gray-600">
-                    Estimated delivery: 3-5 business days
+                    Estimated delivery: 1-2 business days
                   </p>
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Order Confirmation Email Notice */}
-        <Card className="mb-8 bg-blue-50 border-blue-200">
-          <CardContent className="pt-6 pb-6">
-            <p className="text-center text-sm text-blue-900">
-              📧 A confirmation email has been sent to your email address with
-              order details.
-            </p>
           </CardContent>
         </Card>
 

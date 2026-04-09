@@ -70,7 +70,14 @@ const UserInfoPage = () => {
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-2xl font-bold">Shipping Information</h1>
+            <div className="flex items-center gap-3">
+              <img 
+                src="https://w7.pngwing.com/pngs/45/625/png-transparent-yellow-logo-illustration-walmart-logo-grocery-store-retail-asda-stores-limited-icon-walmart-logo-miscellaneous-company-orange.png"
+                alt="Walmart Logo"
+                className="h-8 w-8 object-contain"
+              />
+              <h1 className="text-2xl font-bold">Shipping Information</h1>
+            </div>
           </div>
         </div>
       </header>

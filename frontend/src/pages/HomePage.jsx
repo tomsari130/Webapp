@@ -207,33 +207,72 @@ const HomePage = () => {
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#0071CE] text-white mt-16 py-12">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+      <footer className="bg-[#0071CE] text-white mt-16">
+        <div className="container mx-auto px-4 py-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+            {/* Company Info */}
             <div>
-              <h4 className="font-bold text-lg mb-4">Secure Shopping</h4>
-              <p className="text-sm opacity-90">
-                Your payment information is encrypted and secure. We never store
-                your card details.
+              <div className="flex items-center gap-2 mb-4">
+                <img 
+                  src="https://w7.pngwing.com/pngs/45/625/png-transparent-yellow-logo-illustration-walmart-logo-grocery-store-retail-asda-stores-limited-icon-walmart-logo-miscellaneous-company-orange.png"
+                  alt="Walmart"
+                  className="h-8 w-8"
+                />
+                <h3 className="font-bold text-xl">Walmart</h3>
+              </div>
+              <p className="text-sm opacity-90 mb-4">
+                Save money. Live better. Your trusted destination for quality products at unbeatable prices.
               </p>
             </div>
+
+            {/* Customer Service */}
             <div>
-              <h4 className="font-bold text-lg mb-4">Money-Back Guarantee</h4>
-              <p className="text-sm opacity-90">
-                Not satisfied? Return within 30 days for a full refund. No
-                questions asked.
-              </p>
+              <h4 className="font-bold text-lg mb-4">Customer Service</h4>
+              <ul className="space-y-2 text-sm opacity-90">
+                <li><a href="#" className="hover:underline">Help Center</a></li>
+                <li><a href="#" className="hover:underline">Track Your Order</a></li>
+                <li><a href="#" className="hover:underline">Returns & Exchanges</a></li>
+                <li><a href="#" className="hover:underline">Shipping Info</a></li>
+                <li><a href="#" className="hover:underline">Contact Us</a></li>
+              </ul>
             </div>
+
+            {/* Shop */}
             <div>
-              <h4 className="font-bold text-lg mb-4">Fast Delivery</h4>
-              <p className="text-sm opacity-90">
-                Get your orders delivered quickly. Free shipping on orders over
-                $35.
-              </p>
+              <h4 className="font-bold text-lg mb-4">Shop</h4>
+              <ul className="space-y-2 text-sm opacity-90">
+                <li><a href="#" className="hover:underline">Electronics</a></li>
+                <li><a href="#" className="hover:underline">Groceries</a></li>
+                <li><a href="#" className="hover:underline">Dry Food</a></li>
+                <li><a href="#" className="hover:underline">Medicines</a></li>
+                <li><a href="#" className="hover:underline">All Categories</a></li>
+              </ul>
+            </div>
+
+            {/* Company */}
+            <div>
+              <h4 className="font-bold text-lg mb-4">Company</h4>
+              <ul className="space-y-2 text-sm opacity-90">
+                <li><a href="#" className="hover:underline">About Us</a></li>
+                <li><a href="#" className="hover:underline">Careers</a></li>
+                <li><a href="#" className="hover:underline">Privacy Policy</a></li>
+                <li><a href="#" className="hover:underline">Terms of Service</a></li>
+                <li><a href="#" className="hover:underline">Refund Policy</a></li>
+              </ul>
             </div>
           </div>
-          <div className="border-t border-white/20 pt-8 text-center text-sm opacity-75">
-            <p>© 2024 Walmart. All rights reserved.</p>
+
+          <div className="border-t border-white/20 pt-8">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+              <p className="text-sm opacity-75">
+                © 2024 Walmart Inc. All rights reserved.
+              </p>
+              <div className="flex gap-4 text-sm opacity-75">
+                <span>🔒 Secure Payment</span>
+                <span>✓ Money Back Guarantee</span>
+                <span>🚚 Fast Shipping</span>
+              </div>
+            </div>
           </div>
         </div>
       </footer>

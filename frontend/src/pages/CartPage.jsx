@@ -50,24 +50,33 @@ const CartPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
       <header className="bg-[#0071CE] text-white py-4 shadow-md">
         <div className="container mx-auto px-4">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              className="text-white hover:bg-[#004F9A]"
-              onClick={() => navigate('/')}
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-2xl font-bold">Shopping Cart</h1>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                className="text-white hover:bg-[#004F9A]"
+                onClick={() => navigate('/')}
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div className="flex items-center gap-3">
+                <img 
+                  src="https://w7.pngwing.com/pngs/45/625/png-transparent-yellow-logo-illustration-walmart-logo-grocery-store-retail-asda-stores-limited-icon-walmart-logo-miscellaneous-company-orange.png"
+                  alt="Walmart Logo"
+                  className="h-8 w-8 object-contain"
+                />
+                <h1 className="text-2xl font-bold">Shopping Cart</h1>
+              </div>
+            </div>
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 flex-1">
         {cart.length === 0 ? (
           <Card className="max-w-md mx-auto">
             <CardContent className="py-16 text-center">
@@ -188,6 +197,52 @@ const CartPage = () => {
           </div>
         )}
       </div>
+
+      {/* Footer */}
+      <footer className="bg-[#0071CE] text-white mt-auto">
+        <div className="container mx-auto px-4 py-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <img 
+                  src="https://w7.pngwing.com/pngs/45/625/png-transparent-yellow-logo-illustration-walmart-logo-grocery-store-retail-asda-stores-limited-icon-walmart-logo-miscellaneous-company-orange.png"
+                  alt="Walmart"
+                  className="h-6 w-6"
+                />
+                <h3 className="font-bold text-lg">Walmart</h3>
+              </div>
+              <p className="text-xs opacity-90">Save money. Live better.</p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-sm mb-3">Customer Service</h4>
+              <ul className="space-y-1 text-xs opacity-90">
+                <li><a href="#" className="hover:underline">Help Center</a></li>
+                <li><a href="#" className="hover:underline">Track Order</a></li>
+                <li><a href="#" className="hover:underline">Returns</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-sm mb-3">Shop</h4>
+              <ul className="space-y-1 text-xs opacity-90">
+                <li><a href="#" className="hover:underline">Electronics</a></li>
+                <li><a href="#" className="hover:underline">Groceries</a></li>
+                <li><a href="#" className="hover:underline">Medicines</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-sm mb-3">Company</h4>
+              <ul className="space-y-1 text-xs opacity-90">
+                <li><a href="#" className="hover:underline">About Us</a></li>
+                <li><a href="#" className="hover:underline">Privacy Policy</a></li>
+                <li><a href="#" className="hover:underline">Terms of Service</a></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-white/20 mt-6 pt-6 text-center text-xs opacity-75">
+            <p>© 2024 Walmart Inc. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
