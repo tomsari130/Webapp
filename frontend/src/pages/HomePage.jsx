@@ -265,7 +265,7 @@ const HomePage = () => {
           <div className="border-t border-white/20 pt-8">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
               <p className="text-sm opacity-75">
-                © 2024 Walmart Inc. All rights reserved.
+                © 2026 Walmart Inc. All rights reserved.
               </p>
               <div className="flex gap-4 text-sm opacity-75">
                 <span>🔒 Secure Payment</span>

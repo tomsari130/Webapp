@@ -239,7 +239,7 @@ const CartPage = () => {
             </div>
           </div>
           <div className="border-t border-white/20 mt-6 pt-6 text-center text-xs opacity-75">
-            <p>© 2024 Walmart Inc. All rights reserved.</p>
+            <p>© 2026 Walmart Inc. All rights reserved.</p>
           </div>
         </div>
       </footer>

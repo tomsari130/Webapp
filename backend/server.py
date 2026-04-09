@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, HTTPException
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -6,9 +6,10 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List
+from typing import List, Optional
 import uuid
 from datetime import datetime, timezone
+from bson import ObjectId
 
 
 ROOT_DIR = Path(__file__).parent
@@ -36,6 +37,44 @@ class StatusCheck(BaseModel):
 
 class StatusCheckCreate(BaseModel):
     client_name: str
+
+# Order Models
+class OrderItem(BaseModel):
+    id: str
+    name: str
+    price: float
+    quantity: int
+
+class Order(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    customerName: str
+    customerEmail: str
+    customerPhone: str
+    shippingAddress: str
+    city: str
+    state: str
+    zipCode: str
+    country: str
+    items: List[OrderItem]
+    total: float
+    status: str = "pending"
+    createdAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class OrderCreate(BaseModel):
+    customerName: str
+    customerEmail: str
+    customerPhone: str
+    shippingAddress: str
+    city: str
+    state: str
+    zipCode: str
+    country: str
+    items: List[OrderItem]
+    total: float
+
+class OrderUpdate(BaseModel):
+    status: str
 
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
@@ -65,6 +104,73 @@ async def get_status_checks():
             check['timestamp'] = datetime.fromisoformat(check['timestamp'])
     
     return status_checks
+
+# Order Management Endpoints
+@api_router.post("/orders", response_model=dict)
+async def create_order(order: OrderCreate):
+    """Create a new order"""
+    order_dict = order.model_dump()
+    order_dict['status'] = 'pending'
+    order_dict['createdAt'] = datetime.now(timezone.utc).isoformat()
+    
+    result = await db.orders.insert_one(order_dict)
+    return {"id": str(result.inserted_id), "message": "Order created successfully"}
+
+# Admin Endpoints
+@api_router.get("/admin/orders")
+async def get_all_orders():
+    """Get all orders for admin"""
+    orders = await db.orders.find().to_list(1000)
+    
+    # Convert ObjectId to string for JSON serialization
+    for order in orders:
+        order['_id'] = str(order['_id'])
+        if isinstance(order.get('createdAt'), str):
+            order['createdAt'] = datetime.fromisoformat(order['createdAt']).isoformat()
+    
+    return orders
+
+@api_router.get("/admin/orders/{order_id}")
+async def get_order(order_id: str):
+    """Get a specific order"""
+    try:
+        order = await db.orders.find_one({"_id": ObjectId(order_id)})
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+        
+        order['_id'] = str(order['_id'])
+        return order
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@api_router.patch("/admin/orders/{order_id}")
+async def update_order_status(order_id: str, update: OrderUpdate):
+    """Update order status"""
+    try:
+        result = await db.orders.update_one(
+            {"_id": ObjectId(order_id)},
+            {"$set": {"status": update.status}}
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=404, detail="Order not found")
+        
+        return {"message": "Order updated successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@api_router.delete("/admin/orders/{order_id}")
+async def delete_order(order_id: str):
+    """Delete an order"""
+    try:
+        result = await db.orders.delete_one({"_id": ObjectId(order_id)})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Order not found")
+        
+        return {"message": "Order deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 # Include the router in the main app
 app.include_router(api_router)

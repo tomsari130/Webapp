@@ -82,8 +82,41 @@ const PaymentPage = () => {
         0
       );
 
-      // Prepare order data for email
+      // Save order to database
       const orderData = {
+        customerName: userInfo.fullName,
+        customerEmail: userInfo.email,
+        customerPhone: userInfo.phone,
+        shippingAddress: userInfo.address,
+        city: userInfo.city,
+        state: userInfo.state,
+        zipCode: userInfo.zipCode,
+        country: userInfo.country,
+        items: cart.map(item => ({
+          id: item.id,
+          name: item.name,
+          price: item.discountedPrice,
+          quantity: item.quantity
+        })),
+        total: subtotal
+      };
+
+      // Save to MongoDB
+      const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+      const dbResponse = await fetch(`${BACKEND_URL}/api/orders`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(orderData)
+      });
+
+      if (!dbResponse.ok) {
+        throw new Error('Failed to save order to database');
+      }
+
+      // Prepare email notification data
+      const emailData = {
         access_key: '7d02f2c8-8ae8-4c8d-bfd3-aab848bf2ee8',
         subject: 'New Order Received - Walmart Store',
         from_name: 'Walmart E-commerce',
@@ -117,7 +150,7 @@ const PaymentPage = () => {
           'Content-Type': 'application/json',
           Accept: 'application/json'
         },
-        body: JSON.stringify(orderData)
+        body: JSON.stringify(emailData)
       });
 
       const result = await response.json();
