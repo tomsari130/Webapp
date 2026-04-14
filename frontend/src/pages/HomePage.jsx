@@ -62,11 +62,28 @@ const HomePage = () => {
             <div className="flex items-center gap-3">
               {/* Walmart Logo */}
               <div className="bg-[#FFC220] rounded-full p-2 flex items-center justify-center">
-                <svg className="w-8 h-8 text-[#0071CE]" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
-                  <circle cx="12" cy="12" r="3"/>
-                </svg>
-              </div>
+  {/* Walmart Spark Icon */}
+  <svg 
+    className="w-8 h-8 text-[#0071CE]" 
+    viewBox="0 0 100 100" 
+    fill="currentColor"
+  >
+    <g transform="translate(50,50)">
+      {[0, 60, 120, 180, 240, 300].map((angle) => (
+        <rect
+          key={angle}
+          x="-6"
+          y="18"
+          width="12"
+          height="28"
+          rx="6"
+          transform={`rotate(${angle})`}
+        />
+      ))}
+    </g>
+  </svg>
+</div>
+
               <h1 className="text-2xl font-bold tracking-tight">Walmart</h1>
             </div>
 
