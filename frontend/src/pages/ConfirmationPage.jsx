@@ -53,6 +53,12 @@ const ConfirmationPage = () => {
               <CardTitle>Order Summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+<div className="flex justify-between text-sm">
+  <span className="text-gray-600">Order ID:</span>
+  <span className="font-semibold">
+    729262138X
+  </span>
+</div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Order Date:</span>
                 <span className="font-semibold">
