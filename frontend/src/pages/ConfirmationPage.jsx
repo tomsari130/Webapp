@@ -41,7 +41,7 @@ const ConfirmationPage = () => {
               Thank you for shopping with us.
             </p>
             <p className="text-md text-gray-600">
-              Your order will be delivered soon. Please wait.
+              Our team will reach out to you shortly to confirm the details or schedule the delivery.
             </p>
           </CardContent>
         </Card>
